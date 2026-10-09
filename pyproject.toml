@@ -1,0 +1,16 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "hatuira"
+version = "0.1.0"
+description = "Home Assistant lights, switches and covers in the terminal, in step with the Omarchy theme"
+requires-python = ">=3.10"
+dependencies = []
+
+[project.scripts]
+hatuira = "hatuira.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["hatuira*"]
