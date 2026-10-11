@@ -15,7 +15,8 @@ _ARROWS = {"A": "up", "B": "down", "C": "right", "D": "left", "Z": "up"}
 _PLAIN = {"\t": "down", "\r": "enter", "\n": "enter", "\x1b": "esc", "\x03": "q", " ": "space"}
 _WHEEL = {64: "up", 65: "down"}
 # The same physical keys on a Russian layout.
-_LAYOUT = str.maketrans("йкчфыолрдсгЧЫ", "qrxasjkhlcuXS")
+_RU, _EN = "йцукенгшщзфывапролдячсмить", "qwertyuiopasdfghjklzxcvbnm"
+_LAYOUT = str.maketrans(_RU + _RU.upper(), _EN + _EN.upper())
 
 
 class Terminal:

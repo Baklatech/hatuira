@@ -8,6 +8,7 @@ from hatuira import config, sync
 from hatuira.app import App, View, handle
 from hatuira.hass import ApiError, Demo, Hass
 from hatuira.model import entity, layout
+from hatuira.term import _LAYOUT
 from hatuira.theme import Theme
 from hatuira.wizard import normalise
 
@@ -30,6 +31,11 @@ def flush(app):
     for eid, (_, pct) in list(app.wanted.items()):
         del app.wanted[eid]
         app.commit_level(eid, pct)
+
+
+class Keys(unittest.TestCase):
+    def test_every_letter_key_works_on_a_russian_layout(self):
+        self.assertEqual("йкчфыолрдсгЧЫК".translate(_LAYOUT), "qrxasjkhlcuXSR")
 
 
 class Model(unittest.TestCase):
