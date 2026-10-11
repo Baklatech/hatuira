@@ -14,6 +14,12 @@ FALLBACK = {
     "muted": "#565f89", "accent": "#7aa2f7", "red": "#f7768e", "green": "#9ece6a",
     "yellow": "#e0af68", "cyan": "#7dcfff",
 }
+# Themes that only carry the terminal colours name their hues by ANSI slot.
+ANSI = {"red": "color1", "green": "color2", "yellow": "color3",
+        "blue": "color4", "magenta": "color5", "cyan": "color6"}
+# Where a theme puts the colours it is built on, most telling first.
+SIGNATURE = ("accent", "active_border_color", "cursor", "selection_background", "selection",
+             "foreground")
 # colors.toml is flat `key = "#rrggbb"` lines, so no TOML parser is needed.
 _LINE = re.compile(r'^\s*([A-Za-z0-9_-]+)\s*=\s*["\'](#[0-9A-Fa-f]{6})["\']', re.M)
 
@@ -43,6 +49,18 @@ def contrast(c):
     return (0, 0, 0) if c[0] * 0.299 + c[1] * 0.587 + c[2] * 0.114 > 140 else (255, 255, 255)
 
 
+def vivid(c):
+    """Colourful enough to tint a lamp, not a grey or a near-black."""
+    _, s, v = colorsys.rgb_to_hsv(*(x / 255 for x in c))
+    return s >= 0.22 and v >= 0.3
+
+
+def apart(a, b):
+    """How far two hues are from each other around the wheel, 0..0.5."""
+    d = abs(colorsys.rgb_to_hsv(*a)[0] - colorsys.rgb_to_hsv(*b)[0])
+    return min(d, 1 - d)
+
+
 def mix(a, b, f):
     return (int(a[0] + (b[0] - a[0]) * f), int(a[1] + (b[1] - a[1]) * f),
             int(a[2] + (b[2] - a[2]) * f))
@@ -56,15 +74,19 @@ class Theme:
         self.load()
 
     def load(self):
-        raw = dict(FALLBACK)
+        raw, found = dict(FALLBACK), {}
         if self.path:
             try:
                 self.mtime = os.stat(self.path).st_mtime
                 with open(self.path, encoding="utf-8") as f:
-                    raw.update(_LINE.findall(f.read()))
+                    found = dict(_LINE.findall(f.read()))
+                found.update({name: found[slot] for name, slot in ANSI.items()
+                              if name not in found and slot in found})
+                raw.update(found)
             except (OSError, ValueError):
                 pass
         self.colours = c = {k: rgb(v) for k, v in raw.items()}
+        self.own = set(found) or set(raw)  # the fallback only lends colours to the interface
         self.bg, self.fg = c["background"], c["foreground"]
         self.bright = c["bright_foreground"]
         self.muted, self.accent = c["muted"], c["accent"]
@@ -79,8 +101,22 @@ class Theme:
         out = []
         for key in ("accent", "red", "orange", "yellow", "green", "cyan", "blue", "magenta"):
             c = self.colours.get(key)
-            if c and c not in out:
+            if c and c not in out and (key in self.own or not out):
                 out.append(c)
+        return out
+
+    def main(self):
+        """The two or three colours the theme is built on, accent first."""
+        out = [self.accent]
+        for key in SIGNATURE:
+            c = self.colours.get(key)
+            if c and len(out) < 3 and vivid(c) and all(apart(c, o) >= 1 / 12 for o in out):
+                out.append(c)
+        if len(out) < 2:  # a theme with one colour of its own: pair it with its furthest hue
+            rest = [c for c in self.palette() if c not in out]
+            pool = [c for c in rest if vivid(c)] or rest
+            if pool:
+                out.append(max(pool, key=lambda c: apart(c, self.accent)))
         return out
 
     def colour(self, key):

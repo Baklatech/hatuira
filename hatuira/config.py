@@ -9,7 +9,8 @@ DEFAULT_URL = "http://homeassistant.local:8123"
 DEFAULTS = {
     "interval": 5,       # seconds between polls while the list is open
     "step": 10,          # percent per ←/→ press
-    "mode": "single",    # lights that follow the theme: "single" colour or a "mix" of its hues
+    "mode": "single",    # lights that follow the theme: a "single" colour, the two or three
+                         # "main" colours of the theme or a "mix" of all its hues
     "color": "accent",   # colors.toml key they all get in "single" mode
     "transition": 1,     # seconds a light takes to fade to a new theme colour
 }

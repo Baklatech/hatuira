@@ -293,14 +293,20 @@ class App:
         self.save(self.cfg)
         self.rebuild()
 
+    def next_mode(self):
+        modes = sync.MODES
+        mode = self.settings["mode"]
+        return modes[(modes.index(mode) + 1) % len(modes)] if mode in modes else modes[0]
+
     def toggle_mode(self):
-        """One tone for every light that follows the theme, or a mix of the theme's hues."""
-        mixed = self.settings["mode"] != "mix"
-        self.settings["mode"] = "mix" if mixed else "single"
+        """One tone for every light that follows the theme, its main colours, or a mix of
+        all its hues."""
+        mode = self.settings["mode"] = self.next_mode()
         self.save(self.cfg)
         self.repaint()
-        self.say("theme lights: a mix of the theme colours — r reshuffles" if mixed
-                 else "theme lights: one tone")
+        self.say({"main": "theme lights: the main colours of the theme — r reshuffles",
+                  "mix": "theme lights: a mix of the theme colours — r reshuffles"}
+                 .get(mode, "theme lights: one tone"))
 
     def repaint(self):
         """Give the lit lights that follow the theme its colours again; a mix is redealt."""
@@ -315,7 +321,7 @@ class App:
         for e, rgb in zip(lit, dealt):
             self.send("light", "turn_on", sync.payload(self.settings, e.id, rgb))
             self.hold(e, rgb=rgb)
-        self.say("theme colours reshuffled" if self.settings["mode"] == "mix"
+        self.say("theme colours reshuffled" if sync.spread(self.settings)
                  else "theme colour applied")
 
     def paint(self, e, cell):
@@ -550,8 +556,8 @@ class View:
         line = Line().add("  hatuira", t.accent, True)
         right = Line()
         if app.loaded and app.cfg["sync"] and w >= 40:
-            if app.settings["mode"] == "mix":
-                for c in t.palette()[:3]:
+            if sync.spread(app.settings):
+                for c in t.main() if app.settings["mode"] == "main" else t.palette()[:5]:
                     right.add("◈", c)
                 right.add(" ", t.fg)
             else:
@@ -606,8 +612,8 @@ class View:
         if hidden:
             line.add(" × ", t.muted, back=back)
         elif app.follows(e):
-            tone = t.colour(app.settings["color"]) if app.settings["mode"] != "mix" else \
-                e.rgb or t.muted
+            tone = e.rgb or t.muted if sync.spread(app.settings) else \
+                t.colour(app.settings["color"])
             line.add(" ◈ ", tone, back=back)
         else:
             line.add("   ", t.fg, back=back)
@@ -646,12 +652,13 @@ class View:
             if e.colour:
                 keys.append(("s", "theme"))
             if app.cfg["sync"]:
-                keys.append(("S", "one tone" if app.settings["mode"] == "mix" else "mix"))
+                keys.append(("S", {"single": "one tone", "main": "main colours",
+                                   "mix": "mix"}[app.next_mode()]))
             keys.append(("x", "show" if e.id in app.hidden else "hide"))
         if app.hidden and not app.palette:
             keys.append(("a", "fewer" if app.show_hidden else f"{len(app.hidden)} hidden"))
         if app.cfg["sync"] and not app.palette:
-            keys.append(("r", "reshuffle" if app.settings["mode"] == "mix" else "repaint"))
+            keys.append(("r", "reshuffle" if sync.spread(app.settings) else "repaint"))
         keys += [("q", "quit"), ("u", "refresh")]
         line = Line().add(" ", t.fg)
         for key, label in keys:

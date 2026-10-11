@@ -221,10 +221,50 @@ class Colours(unittest.TestCase):
         self.assertEqual(len(set(sent)), 2)
         self.assertTrue(set(sent) <= set(theme.palette()))
 
+    def theme(self, body):
+        f = tempfile.NamedTemporaryFile("w", suffix=".toml", delete=False)
+        f.write(body)
+        f.close()
+        return Theme(path=f.name)
+
+    def test_hues_come_from_the_terminal_colours_when_unnamed(self):
+        theme = self.theme('accent = "#00a8ff"\ncolor1 = "#ff004d"\ncolor2 = "#00ff88"\n')
+        self.assertEqual(theme.palette()[:2], [(0, 168, 255), (255, 0, 77)])
+        self.assertEqual(theme.green, (0, 255, 136))
+        named = self.theme('accent = "#00a8ff"\nred = "#aa0000"\ncolor1 = "#ff004d"\n')
+        self.assertEqual(named.red, (170, 0, 0))
+
+    def test_main_colours_of_the_theme(self):
+        # the accent and a foreground of its own; the cursor is a shade of the accent,
+        # the selection too dark to be a colour
+        theme = self.theme('accent = "#00BCD4"\ncursor = "#00E5FF"\n'
+                           'selection_background = "#003333"\nforeground = "#FF69B4"\n')
+        self.assertEqual(theme.main(), [(0, 188, 212), (255, 105, 180)])
+        # nothing but the accent stands out: it is paired with the hue furthest from it
+        plain = self.theme('accent = "#c86a24"\nforeground = "#dddddd"\n'
+                           'color1 = "#8e2f22"\ncolor5 = "#3c8f95"\ncolor3 = "#b88a42"\n')
+        self.assertEqual(plain.main(), [(200, 106, 36), (60, 143, 149)])
+        three = self.theme('accent = "#0000ff"\nactive_border_color = "#ffff00"\n'
+                           'cursor = "#ff0000"\nforeground = "#00ff00"\n')
+        self.assertEqual(len(three.main()), 3)
+
+    def test_main_mode_deals_out_only_the_main_colours(self):
+        import random
+        theme = self.theme('accent = "#00BCD4"\nforeground = "#FF69B4"\ncolor1 = "#ff0000"\n')
+        settings = {**config.DEFAULTS, "mode": "main"}
+        dealt = sync.colours(theme, settings, 5, random.Random(3))
+        self.assertEqual(set(dealt), {(0, 188, 212), (255, 105, 180)})
+        self.assertNotEqual(dealt[0], dealt[1])
+
     def test_mode_toggle_repaints_lit_synced_lights(self):
         app, saved = make(synced=["light.tv_strip", "light.floor_lamp", "light.bedside"])
         app.toggle_mode()
+        self.assertEqual(saved[-1]["settings"]["mode"], "main")
+        self.assertTrue({tuple(c[2]["rgb_color"]) for c in app.client.calls}
+                        <= set(app.theme.main()))
+        app.toggle_mode()
         self.assertEqual(saved[-1]["settings"]["mode"], "mix")
+        del app.client.calls[:-2]
         self.assertEqual(sorted(c[2]["entity_id"] for c in app.client.calls),
                          ["light.floor_lamp", "light.tv_strip"])
         for _ in range(6):  # r deals the hues again, never the same hand twice in a row
