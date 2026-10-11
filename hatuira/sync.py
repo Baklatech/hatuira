@@ -13,14 +13,19 @@ def spread(settings):
     return settings["mode"] in MODES[1:]
 
 
+def hues(theme, settings):
+    """The colours the mode lets a light have."""
+    if not spread(settings):
+        return [theme.colour(settings["color"])]
+    return theme.main() if settings["mode"] == "main" else theme.palette()
+
+
 def colours(theme, settings, n, rng=random):
     """`n` colours for `n` lights: one tone for all, or the theme's main colours or all
     of its hues dealt out."""
-    if not spread(settings):
-        return [theme.colour(settings["color"])] * n
-    hues = theme.main() if settings["mode"] == "main" else theme.palette()
-    rng.shuffle(hues)  # a new deal every time; neighbours differ while the hues last
-    return [hues[i % len(hues)] for i in range(n)]
+    deck = hues(theme, settings)
+    rng.shuffle(deck)  # a new deal every time; neighbours differ while the hues last
+    return [deck[i % len(deck)] for i in range(n)]
 
 
 def payload(settings, ids, rgb):

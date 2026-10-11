@@ -256,6 +256,28 @@ class Colours(unittest.TestCase):
         self.assertEqual(set(dealt), {(0, 188, 212), (255, 105, 180)})
         self.assertNotEqual(dealt[0], dealt[1])
 
+    def test_r_recolours_only_the_selected_light(self):
+        app, _ = make(synced=["light.tv_strip", "light.floor_lamp"])
+        app.settings["mode"] = "mix"
+        view = View(app.theme, "demo")
+        view.resize(80, 30)
+        view.lines(app)
+        app.selected = "light.tv_strip"
+        for _ in range(6):  # never the colour it already has
+            before = app.find("light.tv_strip").rgb
+            handle(app, view, "r")
+            call = app.client.calls[-1][2]
+            self.assertEqual(call["entity_id"], "light.tv_strip")
+            self.assertIn(tuple(call["rgb_color"]), app.theme.palette())
+            self.assertNotEqual(tuple(call["rgb_color"]), before)
+        self.assertEqual({c[2]["entity_id"] for c in app.client.calls}, {"light.tv_strip"})
+        handle(app, view, "R")
+        self.assertEqual({c[2]["entity_id"] for c in app.client.calls[-2:]},
+                         {"light.tv_strip", "light.floor_lamp"})
+        app.selected = "light.bedside"
+        handle(app, view, "r")
+        self.assertIn("is off", app.note)
+
     def test_mode_toggle_repaints_lit_synced_lights(self):
         app, saved = make(synced=["light.tv_strip", "light.floor_lamp", "light.bedside"])
         app.toggle_mode()
@@ -267,7 +289,7 @@ class Colours(unittest.TestCase):
         del app.client.calls[:-2]
         self.assertEqual(sorted(c[2]["entity_id"] for c in app.client.calls),
                          ["light.floor_lamp", "light.tv_strip"])
-        for _ in range(6):  # r deals the hues again, never the same hand twice in a row
+        for _ in range(6):  # R deals the hues again, never the same hand twice in a row
             before = [c[2]["rgb_color"] for c in app.client.calls[-2:]]
             app.repaint()
             self.assertNotEqual([c[2]["rgb_color"] for c in app.client.calls[-2:]], before)

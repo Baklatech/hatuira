@@ -1,6 +1,7 @@
 """Main loop: poll Home Assistant, draw the list, send what the keys ask for."""
 
 import queue
+import random
 import re
 import threading
 import time
@@ -304,8 +305,8 @@ class App:
         mode = self.settings["mode"] = self.next_mode()
         self.save(self.cfg)
         self.repaint()
-        self.say({"main": "theme lights: the main colours of the theme — r reshuffles",
-                  "mix": "theme lights: a mix of the theme colours — r reshuffles"}
+        self.say({"main": "theme lights: the main colours of the theme — R reshuffles",
+                  "mix": "theme lights: a mix of the theme colours — R reshuffles"}
                  .get(mode, "theme lights: one tone"))
 
     def repaint(self):
@@ -323,6 +324,17 @@ class App:
             self.hold(e, rgb=rgb)
         self.say("theme colours reshuffled" if sync.spread(self.settings)
                  else "theme colour applied")
+
+    def recolour(self, e):
+        """Give one light another of the colours the mode deals out."""
+        if e.domain != "light" or not e.colour:
+            return self.say(f"{e.name} has no colour to change")
+        if not e.available or not e.on:
+            return self.say(f"{e.name} is {'off' if e.available else 'unavailable'}")
+        deck = sync.hues(self.theme, self.settings)
+        rgb = random.choice([c for c in deck if c != e.rgb] or deck)
+        self.send("light", "turn_on", sync.payload(self.settings, e.id, rgb))
+        self.hold(e, rgb=rgb)
 
     def paint(self, e, cell):
         """Give a light the colour of a palette cell: (rgb as drawn, turn_on data)."""
@@ -651,6 +663,7 @@ class View:
                 keys.append(("c", "colour"))
             if e.colour:
                 keys.append(("s", "theme"))
+                keys.append(("r", "recolour"))
             if app.cfg["sync"]:
                 keys.append(("S", {"single": "one tone", "main": "main colours",
                                    "mix": "mix"}[app.next_mode()]))
@@ -658,7 +671,7 @@ class View:
         if app.hidden and not app.palette:
             keys.append(("a", "fewer" if app.show_hidden else f"{len(app.hidden)} hidden"))
         if app.cfg["sync"] and not app.palette:
-            keys.append(("r", "reshuffle" if sync.spread(app.settings) else "repaint"))
+            keys.append(("R", "reshuffle" if sync.spread(app.settings) else "repaint"))
         keys += [("q", "quit"), ("u", "refresh")]
         line = Line().add(" ", t.fg)
         for key, label in keys:
@@ -711,7 +724,7 @@ def handle(app, view, key):
     elif key == "a":
         app.show_hidden = not app.show_hidden
         app.rebuild()
-    elif key == "r":
+    elif key == "R":
         app.repaint()
     elif key == "u":
         app.refresh()
@@ -725,6 +738,8 @@ def handle(app, view, key):
         app.step(e, 1)
     elif key == "s":
         app.toggle_sync(e)
+    elif key == "r":
+        app.recolour(e)
     elif key == "c":
         if e.white and e.available:
             app.palette = True
