@@ -3,7 +3,7 @@
 # hatuira installer for Arch and Debian-based distros, with Omarchy integration.
 #
 #   ./install.sh                 install from this checkout
-#   curl -fsSL https://raw.githubusercontent.com/Gnome627/hatuira/main/install.sh | bash
+#   curl -fsSL https://raw.githubusercontent.com/Baklatech/hatuira/main/install.sh | bash
 #   ./install.sh --uninstall     remove hatuira and everything the installer added
 #
 # Options:
@@ -15,7 +15,7 @@
 
 set -euo pipefail
 
-REPO="${HATUIRA_REPO:-Gnome627/hatuira}"
+REPO="${HATUIRA_REPO:-Baklatech/hatuira}"
 PREFIX="${PREFIX:-$HOME/.local}"
 DATA_DIR="${XDG_DATA_HOME:-$HOME/.local/share}"
 CONFIG_DIR="${XDG_CONFIG_HOME:-$HOME/.config}"

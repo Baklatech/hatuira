@@ -10,7 +10,7 @@
 ## Установка
 
     ./install.sh              # из клона, в ~/.local, без root
-    curl -fsSL https://raw.githubusercontent.com/Gnome627/hatuira/main/install.sh | bash
+    curl -fsSL https://raw.githubusercontent.com/Baklatech/hatuira/main/install.sh | bash
     ./install.sh --uninstall  # удалить; настройки в ~/.config/hatuira остаются
 
 Скрипт работает на Arch и на Debian-подобных (Debian 12+, Ubuntu 22.04+): если нет
