@@ -119,3 +119,7 @@ Home Assistant не сообщает, чем управляет `switch`, а б�
 руками.
 
     python3 -m unittest discover -s tests
+
+## Лицензия
+
+GPL-3.0-or-later, см. [LICENSE](LICENSE).
